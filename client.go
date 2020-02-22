@@ -268,6 +268,7 @@ func (cli *TCPClient) handleRead(ctx context.Context) {
 			}
 
 			checksum := binary.BigEndian.Uint32(checksumBuf)
+
 			packet := NewPacket(verBuf[0], size, dataBuf, checksum)
 
 			if !packet.Checksum() {

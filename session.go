@@ -17,9 +17,10 @@ const (
 	defaultSendChanelCacheSize = 16
 )
 
+// Session status
 const (
-	StatusCreated = "Created"
-	StatusClosed  = "Closed"
+	statusCreated = "Created"
+	statusClosed  = "Closed"
 )
 
 type SessionWriter interface {
@@ -47,7 +48,7 @@ type Session struct {
 func NewSession(conn *net.TCPConn, readDeadline time.Duration, WriteDeadline time.Duration, heartbeat time.Duration, serverRef *TCPServer) *Session {
 	return &Session{
 		sID:           uuid.Must(uuid.NewV4()).String(),
-		status:        StatusCreated,
+		status:        statusCreated,
 		attributes:    make(map[string]interface{}),
 		conn:          conn,
 		readDeadline:  readDeadline,
@@ -69,8 +70,8 @@ func (s *Session) CloseSession(reason string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	if s.status != StatusClosed {
-		s.status = StatusClosed
+	if s.status != statusClosed {
+		s.status = statusClosed
 		s.closeSign <- true
 		s.serRef.debugLogger.Printf(
 			"Session close. sID: %s, cli: %s, reason: %s",
@@ -83,11 +84,17 @@ func (s *Session) SID() string {
 	return s.sID
 }
 
+// IsClosed return the session is closed
+func (s *Session) IsClosed() bool {
+	return s.status == statusClosed
+}
+
 // RemoteAddr return string form of address (for example, "192.0.2.1:25", "[2001:db8::1]:80")
 func (s *Session) RemoteAddr() string {
 	return s.conn.RemoteAddr().String()
 }
 
+// WriteDeadLine return the session write deadline
 func (s *Session) WriteDeadline() time.Duration {
 	return s.writeDeadline
 }

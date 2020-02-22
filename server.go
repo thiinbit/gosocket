@@ -32,7 +32,54 @@ type TCPServer struct {
 
 // NewTCPServer create a new tcp server
 // Usage:
-// *    TODO: write usage
+//  ============================================
+//   ! Detail see: server_test.go OR README.md!
+//  ============================================
+//	// ==== ==== Server QuickStart ==== ====
+//
+//	// 1. Implement server OnMessageListener interface. see code above.
+//	//     type MessageListener interface {
+//	//         OnMessage(ctx context.Context, message interface{}, session *Session)
+//	//     }
+//
+//	// 2. New TCPServer, register MessageListener to the server, and startup it.
+//	//    - And now, congratulations! a tcp server is ready.
+//	server, _ := NewTCPServer("[::1]:8888").
+//		RegisterMessageListener(&TestExampleServerMessageListener{}). // Required
+//		Run()
+//
+//	// 3. Stop the server when it is finished.
+//	go func() {
+//		<-time.NewTimer(10 * time.Second).C
+//
+//		server.Stop()
+//	}()
+//
+//	// ==== ==== Client QuickStart ==== ====
+//
+//	// 1. Implement ClientMessageListener interface. see code above.
+//	//     type ClientMessageListener interface {
+//	//         OnMessage(ctx context.Context, message interface{}, cli *TCPClient)
+//	//     }
+//
+//	// 2. New TCPClient, register ClientMessageListener to the client, and dial to server.
+//	//    - And now, congratulations! a tcp client is ready.
+//	client, _ := NewTcpClient("[::1]:8888").
+//		RegisterMessageListener(&TestExampleClientListener{}).
+//		Dial()
+//
+//	// 3. Say "Hello!" to server.
+//	client.SendMessage("Hello!")
+//
+//	// 4. Hangup the client when it is finished.
+//	go func() {
+//		<-time.NewTimer(6 * time.Second).C
+//
+//		client.Hangup("It should be hangup now!")
+//	}()
+//  ============================================
+//   ! Detail see: server_test.go OR README.md!
+//  ============================================
 func NewTCPServer(addr string) *TCPServer {
 	return &TCPServer{
 		env:                  DEBUG,
@@ -59,6 +106,18 @@ func (ts *TCPServer) Sessions() map[string]*Session {
 	return ts.sessions
 }
 
+func (ts *TCPServer) RegisterMessageListener(listener MessageListener) *TCPServer {
+	ts.checkPreparingStatus()
+	ts.messageListener = listener
+	return ts
+}
+
+func (ts *TCPServer) RegisterSessionListener(listener SessionListener) *TCPServer {
+	ts.checkPreparingStatus()
+	ts.sessionListener = listener
+	return ts
+}
+
 func (ts *TCPServer) SetDebugMode(on bool) *TCPServer {
 	ts.mu.Lock()
 
@@ -72,15 +131,9 @@ func (ts *TCPServer) SetDebugMode(on bool) *TCPServer {
 	return ts
 }
 
-func (ts *TCPServer) RegisterMessageListener(listener MessageListener) *TCPServer {
+func (ts *TCPServer) SetCodec(codec Codec) *TCPServer {
 	ts.checkPreparingStatus()
-	ts.messageListener = listener
-	return ts
-}
-
-func (ts *TCPServer) RegisterSessionListener(listener SessionListener) *TCPServer {
-	ts.checkPreparingStatus()
-	ts.sessionListener = listener
+	ts.codec = codec
 	return ts
 }
 
@@ -94,12 +147,6 @@ func (ts *TCPServer) SetLogger(debugLogger Logger, logger Logger) *TCPServer {
 	ts.checkPreparingStatus()
 	ts.debugLogger = DebugLogger{isDebugMode: ts.debugLogger.isDebugMode, logger: debugLogger}
 	ts.logger = logger
-	return ts
-}
-
-func (ts *TCPServer) SetCodec(codec Codec) *TCPServer {
-	ts.checkPreparingStatus()
-	ts.codec = codec
 	return ts
 }
 
@@ -133,24 +180,6 @@ func (ts *TCPServer) SetDefaultSessionWriteDeadline(write time.Duration) *TCPSer
 	ts.checkPreparingStatus()
 	ts.defaultWriteDeadline = write
 	return ts
-}
-
-func (ts *TCPServer) checkPreparingStatus() {
-	if ts.status != Preparing {
-		ts.logger.Panic("Can't change Server config on running or stop")
-	}
-}
-
-func (ts *TCPServer) checkMessageListenerRegistered() {
-	if ts.messageListener == nil {
-		ts.logger.Panic("Message listener not registered!")
-	}
-}
-
-func (ts *TCPServer) checkHeartbeatLtReadDead() {
-	if ts.defaultHeartbeat >= ts.defaultReadDeadline {
-		ts.logger.Panic("Heartbeat need time less than read deadline")
-	}
 }
 
 func (ts *TCPServer) Run() (*TCPServer, error) {
@@ -207,6 +236,24 @@ func (ts *TCPServer) Stop() error {
 	}
 
 	return nil
+}
+
+func (ts *TCPServer) checkPreparingStatus() {
+	if ts.status != Preparing {
+		ts.logger.Panic("Can't change Server config on running or stop")
+	}
+}
+
+func (ts *TCPServer) checkMessageListenerRegistered() {
+	if ts.messageListener == nil {
+		ts.logger.Panic("Message listener not registered!")
+	}
+}
+
+func (ts *TCPServer) checkHeartbeatLtReadDead() {
+	if ts.defaultHeartbeat >= ts.defaultReadDeadline {
+		ts.logger.Panic("Heartbeat need time less than read deadline")
+	}
 }
 
 func (ts *TCPServer) handleAccept(ctx context.Context) {

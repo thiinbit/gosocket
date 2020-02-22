@@ -36,6 +36,8 @@ func (d defaultConnectHandler) OnConnect(ctx context.Context, conn *net.TCPConn,
 		if tcpSer.sessionListener != nil {
 			tcpSer.sessionListener.OnSessionClose(s)
 		}
+
+		// Conn will close after return.
 	}
 }
 
