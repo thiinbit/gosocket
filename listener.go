@@ -1,10 +1,13 @@
+// Copyright 2020 @thiinbit. All rights reserved.
+// Use of this source code is governed by an MIT-style
+// license that can be found in the LICENSE file
+
 package gosocket
 
 import "context"
 
 // MessageListener message processor interface
 // Usage:
-// *    TODO: write usage
 type MessageListener interface {
 	OnMessage(ctx context.Context, message interface{}, session *Session)
 }

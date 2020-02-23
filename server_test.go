@@ -1,3 +1,7 @@
+// Copyright 2020 @thiinbit. All rights reserved.
+// Use of this source code is governed by an MIT-style
+// license that can be found in the LICENSE file
+
 package gosocket
 
 import (
@@ -16,7 +20,7 @@ func (tl *TestExampleServerMessageListener) OnMessage(ctx context.Context, messa
 	log.Print("Server received message: ", message)
 
 	// Reply to Client "Hi!" when received "Hello!".
-	if message == "Hello!" {
+	if message == "Hello!" || message == "Hello, Gosocket!" {
 		session.SendMessage("Hi!")
 	}
 }
@@ -37,6 +41,8 @@ func (cl *TestExampleClientListener) OnMessage(ctx context.Context, message inte
 // ======== ======== Quick Start ======== ========
 // ======== ========             ======== ========
 func TestUsageQuickStart(t *testing.T) {
+	//hold := make(chan bool, 1)
+
 	// ==== ==== Server step ==== ====
 
 	// 1. Implement server OnMessageListener interface. see code above.
@@ -46,13 +52,16 @@ func TestUsageQuickStart(t *testing.T) {
 
 	// 2. New TCPServer, register MessageListener to the server, and startup it.
 	//    - And now, congratulations! a tcp server is ready.
+	//server, _ := NewTCPServer("127.0.0.1:8888").
 	server, _ := NewTCPServer("[::1]:8888").
 		RegisterMessageListener(&TestExampleServerMessageListener{}). // Required
 		Run()
 
+	//<-hold
+
 	// 3. Stop the server when it is finished.
 	go func() {
-		<-time.NewTimer(10 * time.Second).C
+		<-time.NewTimer(20 * time.Second).C
 
 		server.Stop()
 	}()

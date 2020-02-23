@@ -1,7 +1,24 @@
 # Gosocket
 
-> A simple, lightweight, session, heartbeat socket library.
 
+> Gosocket is a simple, lightweight, session, heartbeat socket library written in Go (Golang). Supports TCP now. UDP and WS will be supported in future. If you need small and simple enough, you will love Gosocket.
+
+
+## Installation
+
+To install Gin package, you need to install Go and set your Go workspace first.
+
+1. The first need [Go](https://golang.org/) installed (**version 1.11+ is required**), then you can use the below Go command to install Gin.
+
+```sh
+$ go get -u github.com/thiinbit/gosocket
+```
+
+2. Import it in your code:
+
+```go
+import "github.com/thiinbit/gosocket"
+```
 
 ## QuickStart 
 (see server_test.go -> func TestUsageQuickStart)
@@ -157,9 +174,14 @@ func (d TestExampleCodec) Decode(bytes []byte) (interface{}, error) {
 }
 ``` 
 
+## Client SDKs
+
+- Swift client SDK: [Gosocket-Swift](https://github.com/thiinbit/Gosocket-Swift) 
+- Java client SDK: comming soon.
+
 ### TODO:
 1. Supplement more detailed documents and use cases
-2. Swift client sdk.
+2. Swift client sdk -> first version done.
 3. Java client sdk.
 4. Support UDP, WEBSOCKET.
 5. Keep it's simple.
