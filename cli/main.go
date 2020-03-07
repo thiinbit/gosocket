@@ -5,7 +5,6 @@
 package main
 
 import (
-	"context"
 	"github.com/thiinbit/gosocket"
 	"github.com/urfave/cli"
 	"log"
@@ -44,7 +43,7 @@ func main() {
 					return nil
 				}
 				server, err := gosocket.NewTCPServer(c.String("listen")).
-					RegisterMessageListener(&BroadcastServerMessageListener{}).
+					RegisterMessageListener(&gosocket.BroadcastServerMessageListener{}).
 					Run()
 				if err != nil {
 					return err
@@ -78,20 +77,5 @@ func main() {
 
 	if err := app.Run(os.Args); err != nil {
 		log.Fatal(err)
-	}
-}
-
-// BroadcastServerMessageListener
-type BroadcastServerMessageListener struct{}
-
-// BroadcastServerMessageListener impl
-func (tl *BroadcastServerMessageListener) OnMessage(ctx context.Context, message interface{}, session *gosocket.Session) {
-	log.Print("Server received message: ", message)
-
-	for k, v := range session.ServerRef().Sessions() {
-		if session.SID() != k {
-			log.Printf("Broadcast message to client %s: %s ", v.SID(), message)
-			v.SendMessage(message)
-		}
 	}
 }
