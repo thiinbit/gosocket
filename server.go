@@ -285,6 +285,8 @@ func (ts *TCPServer) handleAccept(ctx context.Context) {
 
 				if err := conn.Close(); err != nil {
 					ts.logger.Printf("Conn close error. %v", err)
+				} else {
+					ts.debugLogger.Print("Conn close. ", conn.RemoteAddr().String())
 				}
 			}()
 		}

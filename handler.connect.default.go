@@ -71,11 +71,6 @@ func (d defaultConnectHandler) writeGo(ctx context.Context, s *Session, tcpSer *
 
 			pac := NewPacket(PacketVersion, size, data, adler32.Checksum(data))
 
-			if err := s.conn.SetWriteDeadline(time.Now().Add(s.writeDeadline)); err != nil {
-				s.CloseSession(fmt.Sprint("Set writeDeadline error.", err))
-				return
-			}
-
 			tcpSer.packetHandler.OnPacketSend(ctx, pac, s)
 
 		// Heartbeat
@@ -113,9 +108,9 @@ func (d defaultConnectHandler) readGo(ctx context.Context, s *Session, tcpSer *T
 			var verBuf [1]byte
 			if _, err := s.conn.Read(verBuf[:]); err != nil {
 				if err != io.EOF {
-					s.CloseSession(fmt.Sprint("Read ver error.", err))
+					s.CloseSession(fmt.Sprint("Read close. ", err))
 				} else {
-					s.CloseSession(fmt.Sprint("Session EOF. "))
+					s.CloseSession(fmt.Sprint("Session EOF. ", err))
 				}
 				return
 			}

@@ -9,6 +9,7 @@ import (
 	"context"
 	"encoding/binary"
 	"fmt"
+	"time"
 )
 
 type defaultPacketHandler struct {
@@ -32,6 +33,11 @@ func (d defaultPacketHandler) OnPacketReceived(ctx context.Context, pac *Packet,
 }
 
 func (d defaultPacketHandler) OnPacketSend(ctx context.Context, pac *Packet, s *Session) {
+
+	if err := s.conn.SetWriteDeadline(time.Now().Add(s.writeDeadline)); err != nil {
+		s.CloseSession(fmt.Sprint("Set writeDeadline error.", err))
+		return
+	}
 
 	// process chain if need extends
 
