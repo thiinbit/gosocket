@@ -83,6 +83,11 @@ func (s *Session) CloseSession(reason string) {
 	}
 }
 
+// ServerRef return the server ref of session
+func (s *Session) ServerRef() *TCPServer {
+	return s.serRef
+}
+
 // SID return the session ID
 func (s *Session) SID() string {
 	return s.sID
