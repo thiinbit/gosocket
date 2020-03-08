@@ -11,22 +11,6 @@ import (
 	"time"
 )
 
-const (
-	sessionDefaultReadDeadline  = 42 * time.Second // Default read deadline
-	sessionDefaultWriteDeadline = 5 * time.Second  // Default Write deadline
-	sessionDefaultHeartbeat     = 13 * time.Second // Default keepalive heart beat
-)
-
-const (
-	defaultSendChanelCacheSize = 16
-)
-
-// Session status
-const (
-	statusCreated = "Created"
-	statusClosed  = "Closed"
-)
-
 type SessionWriter interface {
 	Write()
 }

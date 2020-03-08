@@ -71,19 +71,19 @@ func (d defaultConnectHandler) writeGo(ctx context.Context, s *Session, tcpSer *
 
 			pac := NewPacket(PacketVersion, size, data, adler32.Checksum(data))
 
-			tcpSer.packetHandler.OnPacketSend(ctx, pac, s)
+			tcpSer.packetHandler.PacketSend(ctx, pac, s)
 
 		// Heartbeat
 		case <-time.After(s.heartbeat):
+			if s.lastActive.Add(s.heartbeat).After(time.Now()) {
+				continue
+			}
+
 			// Heartbeat can represent 256 instructions. 0: ping; 1: pong
-			pingCmd := make([]byte, 1)
-			pingCmd[0] = 0
-			checksum := adler32.Checksum(pingCmd)
+			pac := NewHeartbeatPacket(HeartbeatCmdPing)
 
-			pac := NewPacket(PacketHeartbeatVersion, 1, pingCmd, checksum)
-
-			tcpSer.debugLogger.Printf("Heartbeat ping. sID: %s, checksum: %d", s.sID, checksum)
-			tcpSer.packetHandler.OnPacketSend(ctx, pac, s)
+			tcpSer.packetHandler.PacketSend(ctx, pac, s)
+			tcpSer.debugLogger.Printf("Heartbeat ping sent. sID: %s, checksum: %d", s.sID, pac.checksum)
 		}
 	}
 }
@@ -156,13 +156,24 @@ func (d defaultConnectHandler) readGo(ctx context.Context, s *Session, tcpSer *T
 			// Heartbeat or message receive
 			if verBuf[0] == PacketHeartbeatVersion { // Heartbeat
 				// Heartbeat can represent 256 instructions. 0: ping; 1: pong
-				if len(dataBuf) == 1 && dataBuf[0] == 1 {
-					tcpSer.debugLogger.Printf("Heartbeat pong. sID: %s, checksum: %d", s.sID, checksum)
+				// Check heartbeat body length right and cmd in 0 or 1.
+				if len(dataBuf) == 1 {
+					if dataBuf[0] == HeartbeatCmdPong { // Received heartbeat pong
+						tcpSer.debugLogger.Printf("Heartbeat pong received. sID: %s, checksum: %d", s.sID, checksum)
+					}
+					if dataBuf[0] == HeartbeatCmdPing { // Received heartbeat ping
+						tcpSer.debugLogger.Printf("Heartbeat ping received. sID: %s, checksum: %d", s.sID, checksum)
+						// Heartbeat can represent 256 instructions. 0: ping; 1: pong
+						pac := NewHeartbeatPacket(HeartbeatCmdPong)
+
+						tcpSer.packetHandler.PacketSend(ctx, pac, s)
+						tcpSer.debugLogger.Printf("Heartbeat pong sent. sID: %s, checksum: %d", s.sID, pac.checksum)
+					}
 				} else {
 					tcpSer.debugLogger.Printf("Heartbeat unknown cmd. sID: %s, cmd: %s, checksum: %d", s.sID, string(dataBuf), checksum)
 				}
 			} else { // Message receive
-				tcpSer.packetHandler.OnPacketReceived(ctx, packet, s)
+				tcpSer.packetHandler.PacketReceived(ctx, packet, s)
 			}
 		}
 	}

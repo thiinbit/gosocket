@@ -15,7 +15,7 @@ import (
 type defaultClientPacketHander struct {
 }
 
-func (d defaultClientPacketHander) OnPacketReceived(ctx context.Context, pac *Packet, cli *TCPClient) {
+func (d defaultClientPacketHander) PacketReceived(ctx context.Context, pac *Packet, cli *TCPClient) {
 
 	// process chain if need extends
 
@@ -28,10 +28,11 @@ func (d defaultClientPacketHander) OnPacketReceived(ctx context.Context, pac *Pa
 
 	cli.debugLogger.Printf("Client packet received. cli: %s, len: %d, checksum: %d.", cli.name, pac.len, pac.checksum)
 
+	cli.UpdateLastActive()
 	cli.messageListener.OnMessage(ctx, m, cli)
 }
 
-func (d defaultClientPacketHander) OnPacketSend(ctx context.Context, pac *Packet, cli *TCPClient) {
+func (d defaultClientPacketHander) PacketSend(ctx context.Context, pac *Packet, cli *TCPClient) {
 
 	// process chain if need extends
 
@@ -61,4 +62,5 @@ func (d defaultClientPacketHander) OnPacketSend(ctx context.Context, pac *Packet
 		cli.Hangup(fmt.Sprintf("Packet write to socket error. writeLen: %d. %v", i, err))
 		return
 	}
+	cli.UpdateLastActive()
 }

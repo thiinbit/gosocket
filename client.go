@@ -34,6 +34,7 @@ type TCPClient struct {
 	hangupSign       chan bool
 	msgSendChan      chan interface{}
 	mu               sync.Mutex
+	lastActive       time.Time
 }
 
 // NewTcpClient create a new tcp server
@@ -44,7 +45,7 @@ func NewTcpClient(serAddr string) *TCPClient {
 		name:             uuid.Must(uuid.NewV4()).String(),
 		env:              DEBUG,
 		status:           Preparing,
-		writeDeadline:    24 * time.Hour, // Client write deadline is 24 hour(need reconnect after one day)
+		writeDeadline:    sessionDefaultWriteDeadline,
 		readDeadline:     sessionDefaultReadDeadline,
 		connect:          nil,
 		serverAddr:       serAddr,
@@ -56,6 +57,7 @@ func NewTcpClient(serAddr string) *TCPClient {
 		messageListener:  nil,
 		hangupSign:       make(chan bool),
 		msgSendChan:      make(chan interface{}, 8),
+		lastActive:       time.Now(),
 	}
 }
 
@@ -174,9 +176,14 @@ func (cli *TCPClient) Hangup(reason string) {
 	if cli.status != Stop {
 		cli.status = Stop
 		cli.hangupSign <- true
+		cli.UpdateLastActive()
 		cli.debugLogger.Printf("Client hangup %s on %s->%s. reason: %s",
 			cli.name, cli.connect.LocalAddr().String(), cli.connect.RemoteAddr().String(), reason)
 	}
+}
+
+func (cli *TCPClient) UpdateLastActive() {
+	cli.lastActive = time.Now()
 }
 
 func (cli *TCPClient) handleConnect(ctx context.Context) {
@@ -209,10 +216,19 @@ func (cli *TCPClient) handleWrite(ctx context.Context) {
 
 			pac := NewPacket(PacketVersion, size, data, adler32.Checksum(data))
 
-			cli.packetHandler.OnPacketSend(ctx, pac, cli)
+			cli.packetHandler.PacketSend(ctx, pac, cli)
 
 		case <-time.After(5 * time.Second):
-			cli.debugLogger.Printf("Cli %s healthy check.", cli.name)
+			if cli.lastActive.Add(5 * time.Second).After(time.Now()) {
+				cli.debugLogger.Printf("Cli %s healthy check.", cli.name)
+				continue
+			}
+
+			// Heartbeat can represent 256 instructions. 0: ping; 1: pong
+			pac := NewHeartbeatPacket(HeartbeatCmdPing)
+
+			cli.packetHandler.PacketSend(ctx, pac, cli)
+			cli.debugLogger.Printf("Cli %s healthy check, ping sent.", cli.name)
 		}
 	}
 }
@@ -282,17 +298,19 @@ func (cli *TCPClient) handleRead(ctx context.Context) {
 
 			// Heartbeat or message
 			if verBuf[0] == PacketHeartbeatVersion { // Heartbeat
-				// Heartbeat can represent 256 instructions. 0: ping; 1: pong
-				pongCmd := make([]byte, 1)
-				pongCmd [0] = 1
-				checksum := adler32.Checksum(pongCmd)
+				if packet.body[0] == HeartbeatCmdPing {
+					// Heartbeat can represent 256 instructions. 0: ping; 1: pong
+					pac := NewHeartbeatPacket(HeartbeatCmdPong)
 
-				pac := NewPacket(PacketHeartbeatVersion, 1, pongCmd, checksum)
+					cli.packetHandler.PacketSend(ctx, pac, cli)
+					cli.debugLogger.Printf("Client heartbeat pong sent. cli: %s, checksum: %d", cli.name, pac.checksum)
+				}
 
-				cli.debugLogger.Printf("Heartbeat pong. cli: %s, checksum: %d", cli.name, checksum)
-				cli.packetHandler.OnPacketSend(ctx, pac, cli)
+				if packet.body[0] == HeartbeatCmdPong {
+					cli.debugLogger.Printf("Cli %s healthy check, pong received.", cli.name)
+				}
 			} else { // Message
-				cli.packetHandler.OnPacketReceived(ctx, packet, cli)
+				cli.packetHandler.PacketReceived(ctx, packet, cli)
 			}
 		}
 	}

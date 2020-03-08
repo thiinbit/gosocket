@@ -15,7 +15,7 @@ import (
 type defaultPacketHandler struct {
 }
 
-func (d defaultPacketHandler) OnPacketReceived(ctx context.Context, pac *Packet, s *Session) {
+func (d defaultPacketHandler) PacketReceived(ctx context.Context, pac *Packet, s *Session) {
 
 	// process chain if need extends
 
@@ -32,7 +32,7 @@ func (d defaultPacketHandler) OnPacketReceived(ctx context.Context, pac *Packet,
 	s.serRef.messageListener.OnMessage(ctx, m, s)
 }
 
-func (d defaultPacketHandler) OnPacketSend(ctx context.Context, pac *Packet, s *Session) {
+func (d defaultPacketHandler) PacketSend(ctx context.Context, pac *Packet, s *Session) {
 
 	if err := s.conn.SetWriteDeadline(time.Now().Add(s.writeDeadline)); err != nil {
 		s.CloseSession(fmt.Sprint("Set writeDeadline error.", err))
@@ -58,9 +58,9 @@ func (d defaultPacketHandler) OnPacketSend(ctx context.Context, pac *Packet, s *
 
 	s.serRef.debugLogger.Printf("Packet send: sID: %s, len: %d, checksum: %d", s.sID, pac.len, pac.checksum)
 
-	s.UpdateLastActive()
 	if i, err := s.conn.Write(dataBuf.Bytes()); err != nil {
 		s.CloseSession(fmt.Sprintf("Packet write to socket error. writeLen: %d. %v", i, err))
 		return
 	}
+	s.UpdateLastActive()
 }
