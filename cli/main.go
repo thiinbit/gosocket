@@ -5,6 +5,7 @@
 package main
 
 import (
+	"bufio"
 	"github.com/thiinbit/gosocket"
 	"github.com/urfave/cli"
 	"log"
@@ -69,7 +70,31 @@ func main() {
 				},
 			},
 			Action: func(c *cli.Context) error {
-				print("Not support now!")
+				if c.String("target") == "" {
+					_ = cli.ShowCommandHelp(c, "target")
+					return nil
+				}
+
+				client, err := gosocket.NewTcpClient(c.String("target")).
+					RegisterMessageListener(&gosocket.ExampleClientMessageListener{}).
+					Dial()
+				if err != nil {
+					return err
+				}
+
+				reader := bufio.NewReader(os.Stdin)
+				for {
+					text, err := reader.ReadString('\n')
+					if err != nil {
+						return err
+					}
+					if text == "quit()\n" {
+						break
+					}
+					client.SendMessage(text)
+				}
+
+				client.Hangup("Quit")
 				return nil
 			},
 		},
