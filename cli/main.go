@@ -91,7 +91,10 @@ func main() {
 					if text == "quit()\n" {
 						break
 					}
-					client.SendMessage(text)
+					err = client.SendMessage(text)
+					if err != nil {
+						return err
+					}
 				}
 
 				client.Hangup("Quit")

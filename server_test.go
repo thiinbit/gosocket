@@ -33,7 +33,7 @@ func (cl *TestExampleClientListener) OnMessage(ctx context.Context, message inte
 
 	// Reply to Server "Nice weather!" when received "Hi!"
 	if message == "Hi!" {
-		cli.SendMessage("Nice weather!")
+		_ = cli.SendMessage("Nice weather!")
 	}
 }
 
@@ -52,9 +52,9 @@ func TestUsageQuickStart(t *testing.T) {
 
 	// 2. New TCPServer, register MessageListener to the server, and startup it.
 	//    - And now, congratulations! a tcp server is ready.
-	//server, _ := NewTCPServer("127.0.0.1:8888").
-	server, _ := NewTCPServer("[::1]:8888").
-		RegisterMessageListener(&TestExampleServerMessageListener{}). // Required
+	server, _ := NewTCPServer("0.0.0.0:8888").
+	//server, _ := NewTCPServer("[::1]:8888").
+		RegisterMessageListener(&BroadcastServerMessageListener{}). // Required
 		Run()
 
 	//<-hold
@@ -80,7 +80,7 @@ func TestUsageQuickStart(t *testing.T) {
 		Dial()
 
 	// 3. Say "Hello!" to server.
-	client.SendMessage("Hello!")
+	_ = client.SendMessage("Hello!")
 
 	// 4. Hangup the client when it is finished.
 	go func() {
@@ -167,7 +167,7 @@ func TestMoreFeatureUsage(t *testing.T) {
 		Dial()
 
 	// 3. Say "Hello!" to server.
-	client.SendMessage("Hello!")
+	_ = client.SendMessage("Hello!")
 
 	// 4. Hangup the client when it is finished.
 	go func() {
@@ -204,7 +204,7 @@ func newClient(runTime time.Duration, addr string) {
 	}
 
 	log.Print("TestClient run.")
-	client.SendMessage("Hello!")
+	_ = client.SendMessage("Hello!")
 
 	<-time.NewTimer(runTime).C
 	client.Hangup("TestClient should hangup.")

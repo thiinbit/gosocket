@@ -7,6 +7,7 @@ package gosocket
 import (
 	"context"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	uuid "github.com/satori/go.uuid"
 	"hash/adler32"
@@ -44,7 +45,7 @@ func NewTcpClient(serAddr string) *TCPClient {
 	return &TCPClient{
 		name:             uuid.Must(uuid.NewV4()).String(),
 		env:              DEBUG,
-		status:           Preparing,
+		status:           Preparing, // Preparing, Running, Stop
 		writeDeadline:    sessionDefaultWriteDeadline,
 		readDeadline:     sessionDefaultReadDeadline,
 		connect:          nil,
@@ -75,9 +76,10 @@ func (cli *TCPClient) SetMaxPacketBodyLength(maxMsgBodyLen uint32) *TCPClient {
 
 func (cli *TCPClient) SetLogger(debugLogger Logger, logger Logger) *TCPClient {
 	cli.mu.Lock()
+	defer cli.mu.Unlock()
+
 	cli.debugLogger = DebugLogger{isDebugMode: cli.debugLogger.isDebugMode, logger: debugLogger}
 	cli.logger = logger
-	cli.mu.Unlock()
 	return cli
 }
 
@@ -165,16 +167,33 @@ func (cli *TCPClient) Dial() (*TCPClient, error) {
 	return cli, nil
 }
 
-func (cli *TCPClient) SendMessage(msg interface{}) {
+func (cli *TCPClient) SendMessage(msg interface{}) error {
+	cli.mu.Lock()
+	defer cli.mu.Unlock()
+
+	if cli.status != Running { // If status != Running, try to redial.
+		return errors.New("Client " + cli.status)
+	}
+
 	cli.msgSendChan <- msg
+
+	return nil
 }
 
 func (cli *TCPClient) Hangup(reason string) {
+
 	cli.mu.Lock()
 	defer cli.mu.Unlock()
 
 	if cli.status != Stop {
 		cli.status = Stop
+
+		// wait 1 sec if has message not sent in chan.
+		for t := 5; len(cli.msgSendChan) > 0 && t > 0; t-- {
+			cli.debugLogger.logger.Print("wait hangup. ", t)
+			<-time.NewTimer(200 * time.Millisecond).C
+		}
+
 		cli.hangupSign <- true
 		cli.UpdateLastActive()
 		cli.debugLogger.Printf("Client hangup %s on %s->%s. reason: %s",
