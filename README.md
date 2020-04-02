@@ -177,7 +177,7 @@ func (d TestExampleCodec) Decode(bytes []byte) (interface{}, error) {
 ## Client SDKs
 
 - Swift client SDK: [Gosocket-Swift](https://github.com/thiinbit/Gosocket-Swift) 
-- Java client SDK: comming soon.
+- Java client SDK: [gosocket4j](https://github.com/thiinbit/gosocket4j) 
 
 ### TODO:
 1. Supplement more detailed documents and use cases
