@@ -182,7 +182,7 @@ func (d TestExampleCodec) Decode(bytes []byte) (interface{}, error) {
 ### TODO:
 1. Supplement more detailed documents and use cases
 2. Swift client sdk -> first version done.
-3. Java client sdk.
+3. Java client sdk -> first version done.
 4. Support UDP, WEBSOCKET.
 5. Keep it's simple.
 
