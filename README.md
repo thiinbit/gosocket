@@ -4,7 +4,7 @@
 > Gosocket is a simple, lightweight, session, heartbeat socket library written in Go (Golang). Supports TCP now. UDP and WS will be supported in future. If you need small and simple enough, you will love Gosocket.
 
 ## Example client
-![demo](https://github.com/thiinbit/gosocket/blob/master/cli/demo_1920x730x6_webm.webm)
+![demo](https://github.com/thiinbit/gosocket/blob/master/cli/demo-1920x730.gif)
 
 Build example client
 ```sh
