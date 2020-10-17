@@ -208,6 +208,7 @@ func (d TestExampleCodec) Decode(bytes []byte) (interface{}, error) {
 ### Ver:
 0.0.1:
 - First version. Base functions.  TCP message, heartbeat, session management, and more.
+   
 0.0.2:
 - Add a client example.
 - Some fix, adj.
