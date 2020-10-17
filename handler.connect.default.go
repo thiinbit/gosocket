@@ -57,7 +57,7 @@ func (d defaultConnectHandler) writeGo(ctx context.Context, s *Session, tcpSer *
 		// Message write
 		case msg := <-s.msgSendChan:
 
-			data, err := tcpSer.codec.Encode(msg)
+			data, err := tcpSer.codec.Encode(ctx, msg, s)
 			if err != nil {
 				s.CloseSession(fmt.Sprint("Encode data error.", err))
 				return
@@ -107,13 +107,19 @@ func (d defaultConnectHandler) readGo(ctx context.Context, s *Session, tcpSer *T
 			// Read Version
 			var verBuf [1]byte
 			if _, err := s.conn.Read(verBuf[:]); err != nil {
-				if err != io.EOF {
-					s.CloseSession(fmt.Sprint("Read close. ", err))
-				} else {
+				if timeoutErr, ok := err.(*net.OpError); ok && timeoutErr.Err.Error() == ErrTimeout.Error() {
+					//tcpSer.debugLogger.Printf("Session %s read continue.", s.SID())
+					continue
+				}
+				if err.Error() == io.EOF.Error() {
 					s.CloseSession(fmt.Sprint("Session EOF. ", err))
+				} else {
+					s.CloseSession(fmt.Sprint("Read close. ", err))
 				}
 				return
 			}
+
+			// Unknown ver
 			if verBuf[0] != PacketVersion && verBuf[0] != PacketHeartbeatVersion {
 				s.CloseSession(fmt.Sprintf("Ver(%s) is wrong.", string(verBuf[0])))
 			}
@@ -125,6 +131,7 @@ func (d defaultConnectHandler) readGo(ctx context.Context, s *Session, tcpSer *T
 				return
 			}
 
+			// Read size check
 			size := binary.BigEndian.Uint32(sizeBuf)
 			if size > tcpSer.maxPacketBodyLen {
 				s.CloseSession(fmt.Sprintf("Recv packet size(%d) exceed max limit. ", size))
@@ -145,11 +152,11 @@ func (d defaultConnectHandler) readGo(ctx context.Context, s *Session, tcpSer *T
 				return
 			}
 
+			// Checksum check
 			checksum := binary.BigEndian.Uint32(checksumBuf)
 			packet := NewPacket(verBuf[0], size, dataBuf, checksum)
-
 			if !packet.Checksum() {
-				s.CloseSession(fmt.Sprint("Checksum error. Check false."))
+				s.CloseSession(fmt.Sprintf("Checksum error. Check false. %d, except: %d", packet.checksum, adler32.Checksum(packet.body)))
 				return
 			}
 

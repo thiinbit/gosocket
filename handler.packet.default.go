@@ -19,7 +19,7 @@ func (d defaultPacketHandler) PacketReceived(ctx context.Context, pac *Packet, s
 
 	// process chain if need extends
 
-	m, err := s.serRef.codec.Decode(pac.body)
+	m, err := s.serRef.codec.Decode(ctx, pac.body, s)
 
 	if err != nil {
 		s.CloseSession(fmt.Sprint("Packet decode error. ", err))
@@ -32,7 +32,7 @@ func (d defaultPacketHandler) PacketReceived(ctx context.Context, pac *Packet, s
 	s.serRef.messageListener.OnMessage(ctx, m, s)
 }
 
-func (d defaultPacketHandler) PacketSend(ctx context.Context, pac *Packet, s *Session) {
+func (d defaultPacketHandler) PacketSend(_ context.Context, pac *Packet, s *Session) {
 
 	if err := s.conn.SetWriteDeadline(time.Now().Add(s.writeDeadline)); err != nil {
 		s.CloseSession(fmt.Sprint("Set writeDeadline error.", err))

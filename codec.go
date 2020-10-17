@@ -4,10 +4,20 @@
 
 package gosocket
 
+import "context"
+
 // Codec
 type Codec interface {
 	// Encode body to bytes
-	Encode(message interface{}) ([]byte, error)
+	Encode(ctx context.Context, message interface{}, session *Session) ([]byte, error)
 	// Decode from bytes
-	Decode(bytes []byte) (interface{}, error)
+	Decode(ctx context.Context, bytes []byte, session *Session) (interface{}, error)
+}
+
+// ClientCodec
+type ClientCodec interface {
+	// Encode body to bytes
+	Encode(ctx context.Context, message interface{}, cli *TCPClient) ([]byte, error)
+	// Decode from bytes
+	Decode(ctx context.Context, bytes []byte, cli *TCPClient) (interface{}, error)
 }

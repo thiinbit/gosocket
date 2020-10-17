@@ -7,8 +7,8 @@ package gosocket
 import "hash/adler32"
 
 const (
-	PacketVersion          byte = 42
-	PacketHeartbeatVersion byte = 255
+	PacketVersion          byte = 0x2A // 101010 -> 42    // Packet ver:    42 -> 43 -> 44 -> ...
+	PacketHeartbeatVersion byte = 0xFF // 11111111 -> 255 // Heartbeat ver: 255 -> 254- > 253 -> ...
 )
 
 const (

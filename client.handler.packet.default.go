@@ -19,7 +19,7 @@ func (d defaultClientPacketHander) PacketReceived(ctx context.Context, pac *Pack
 
 	// process chain if need extends
 
-	m, err := cli.codec.Decode(pac.body)
+	m, err := cli.codec.Decode(ctx, pac.body, cli)
 
 	if err != nil {
 		cli.Hangup(fmt.Sprint("Packet decode error.", err))
@@ -32,7 +32,7 @@ func (d defaultClientPacketHander) PacketReceived(ctx context.Context, pac *Pack
 	cli.messageListener.OnMessage(ctx, m, cli)
 }
 
-func (d defaultClientPacketHander) PacketSend(ctx context.Context, pac *Packet, cli *TCPClient) {
+func (d defaultClientPacketHander) PacketSend(_ context.Context, pac *Packet, cli *TCPClient) {
 
 	// process chain if need extends
 

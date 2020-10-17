@@ -22,7 +22,7 @@ func TestTCPClient_SendMessage(t *testing.T) {
 	go func() {
 		<-time.NewTimer(20 * time.Second).C
 
-		server.Stop()
+		_ = server.Stop()
 	}()
 
 	client, _ := NewTcpClient("[::1]:8888").
@@ -46,5 +46,5 @@ func TestTCPClient_SendMessage(t *testing.T) {
 	}
 
 	client.Hangup("...Test")
-	server.Stop()
+	_ = server.Stop()
 }

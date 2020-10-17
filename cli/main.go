@@ -37,14 +37,26 @@ func main() {
 					Aliases: []string{"l"},
 					Usage:   "Server listen address, like: 0.0.0.0:8888",
 				},
+				&cli.StringFlag{
+					Name:    "debug",
+					Aliases: []string{"d"},
+					Usage:   "open debug log, true|false",
+				},
 			},
 			Action: func(c *cli.Context) error {
 				if c.String("listen") == "" {
 					_ = cli.ShowCommandHelp(c, "server")
 					return nil
 				}
+
+				debug := false
+				if c.String("debug") == "true" {
+					debug = true
+				}
+
 				server, err := gosocket.NewTCPServer(c.String("listen")).
 					RegisterMessageListener(&gosocket.BroadcastServerMessageListener{}).
+					SetDebugMode(debug).
 					Run()
 				if err != nil {
 					return err
@@ -68,15 +80,26 @@ func main() {
 					Aliases: []string{"t"},
 					Usage:   "Dial up to target server, like: 127.0.0.1:8888",
 				},
+				&cli.StringFlag{
+					Name:    "debug",
+					Aliases: []string{"d"},
+					Usage:   "open debug log, true|false",
+				},
 			},
 			Action: func(c *cli.Context) error {
 				if c.String("target") == "" {
-					_ = cli.ShowCommandHelp(c, "target")
+					_ = cli.ShowCommandHelp(c, "client")
 					return nil
+				}
+
+				debug := false
+				if c.String("debug") == "true" {
+					debug = true
 				}
 
 				client, err := gosocket.NewTcpClient(c.String("target")).
 					RegisterMessageListener(&gosocket.ExampleClientMessageListener{}).
+					SetDebugMode(debug).
 					Dial()
 				if err != nil {
 					return err

@@ -24,7 +24,7 @@ const (
 
 // Session keep alive const
 const (
-	sessionDefaultReadDeadline  = 42 * time.Second // Default read deadline
+	sessionDefaultReadDeadline  = 5 * time.Second  // Default read deadline
 	sessionDefaultWriteDeadline = 5 * time.Second  // Default Write deadline
 	sessionDefaultHeartbeat     = 13 * time.Second // Default keepalive heart beat
 )

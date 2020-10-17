@@ -16,7 +16,7 @@ import (
 // TestExampleServerMessageListener !required listener: listening server receives message.
 type TestExampleServerMessageListener struct{}
 
-func (tl *TestExampleServerMessageListener) OnMessage(ctx context.Context, message interface{}, session *Session) {
+func (tl *TestExampleServerMessageListener) OnMessage(_ context.Context, message interface{}, session *Session) {
 	log.Print("Server received message: ", message)
 
 	// Reply to Client "Hi!" when received "Hello!".
@@ -28,7 +28,7 @@ func (tl *TestExampleServerMessageListener) OnMessage(ctx context.Context, messa
 // TestExampleClientListener !required listener: listening client receives message.
 type TestExampleClientListener struct{}
 
-func (cl *TestExampleClientListener) OnMessage(ctx context.Context, message interface{}, cli *TCPClient) {
+func (cl *TestExampleClientListener) OnMessage(_ context.Context, message interface{}, cli *TCPClient) {
 	log.Print("Client received message: ", message)
 
 	// Reply to Server "Nice weather!" when received "Hi!"
@@ -52,8 +52,8 @@ func TestUsageQuickStart(t *testing.T) {
 
 	// 2. New TCPServer, register MessageListener to the server, and startup it.
 	//    - And now, congratulations! a tcp server is ready.
-	server, _ := NewTCPServer("0.0.0.0:8888").
-	//server, _ := NewTCPServer("[::1]:8888").
+	//server, _ := NewTCPServer("0.0.0.0:8888").
+		server, _ := NewTCPServer("[::1]:8888").
 		RegisterMessageListener(&BroadcastServerMessageListener{}). // Required
 		Run()
 
@@ -63,7 +63,7 @@ func TestUsageQuickStart(t *testing.T) {
 	go func() {
 		<-time.NewTimer(20 * time.Second).C
 
-		server.Stop()
+		_ = server.Stop()
 	}()
 
 	// ==== ==== Client step ==== ====
@@ -90,7 +90,7 @@ func TestUsageQuickStart(t *testing.T) {
 	}()
 
 	// Hold test thread.
-	<-time.NewTimer(13 * time.Second).C
+	<-time.NewTimer(21 * time.Second).C
 }
 
 // ======== ========                    ======== ========
@@ -112,15 +112,28 @@ func (t TestExampleSessionListener) OnSessionClose(s *Session) {
 		s.SID(), s.RemoteAddr(), s.CreateTime(), s.LastActive())
 }
 
-type TestExampleCodec struct {
+type TestExampleClientCodec struct {
 }
 
-func (d TestExampleCodec) Encode(message interface{}) ([]byte, error) {
+func (d TestExampleClientCodec) Encode(_ context.Context, message interface{}, _ *TCPClient) ([]byte, error) {
 	// You can use JSON, protobuf and more other methods to serialize
 	return []byte(fmt.Sprintf("%v", message)), nil
 }
 
-func (d TestExampleCodec) Decode(bytes []byte) (interface{}, error) {
+func (d TestExampleClientCodec) Decode(_ context.Context, bytes []byte, _ *TCPClient) (interface{}, error) {
+	// You can use JSON, protobuf and more other methods to deserialize
+	return string(bytes), nil
+}
+
+type TestExampleCodec struct {
+}
+
+func (d TestExampleCodec) Encode(_ context.Context, message interface{}, _ *Session) ([]byte, error) {
+	// You can use JSON, protobuf and more other methods to serialize
+	return []byte(fmt.Sprintf("%v", message)), nil
+}
+
+func (d TestExampleCodec) Decode(_ context.Context, bytes []byte, _ *Session) (interface{}, error) {
 	// You can use JSON, protobuf and more other methods to deserialize
 	return string(bytes), nil
 }
@@ -150,13 +163,13 @@ func TestMoreFeatureUsage(t *testing.T) {
 	go func() {
 		<-time.NewTimer(10 * time.Second).C
 
-		server.Stop()
+		_ = server.Stop()
 	}()
 
 	// ==== ====  All features of the Client ==== ====
 	client, _ := NewTcpClient("[::1]:8888").
 		RegisterMessageListener(&TestExampleClientListener{}). // Required: Listening receives message
-		SetCodec(&TestExampleCodec{}). // Optional: Custom codec. Default codec directly to binary. You can choose to use JSON, protobuf and other methods you want to use.
+		SetCodec(&TestExampleClientCodec{}). // Optional: Custom codec. Default codec directly to binary. You can choose to use JSON, protobuf and other methods you want to use.
 		// The parameters above need to be paid attention to, the parameters below do not need to be paid attention to.
 		SetMaxPacketBodyLength(4*1024*1024).
 		SetSessionReadDeadline(42*time.Second).

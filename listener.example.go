@@ -8,7 +8,6 @@ import (
 	"context"
 )
 
-
 // ======== ======== Broadcast server message receive listener ======== ========
 // BroadcastServerMessageListener
 type BroadcastServerMessageListener struct{}
@@ -16,11 +15,11 @@ type BroadcastServerMessageListener struct{}
 // BroadcastServerMessageListener impl
 func (tl *BroadcastServerMessageListener) OnMessage(ctx context.Context, message interface{}, session *Session) {
 	debugLog := session.serRef.debugLogger
-	debugLog.Print("Server received message: ", message)
+	debugLog.Print("Server received message: ", Green(message))
 
 	for k, v := range session.ServerRef().Sessions() {
 		if session.SID() != k {
-			debugLog.Printf("Broadcast message to client %s: %s ", v.SID(), message)
+			debugLog.Printf("Broadcast message to client %s: %s ", Green(v.SID()), Green(message))
 			v.SendMessage(message)
 		}
 	}
@@ -31,7 +30,7 @@ type ExampleServerMessageListener struct{}
 
 func (e ExampleServerMessageListener) OnMessage(ctx context.Context, message interface{}, session *Session) {
 	debugLog := session.serRef.debugLogger
-	debugLog.Printf("Received message from Client %s. Message content: %s.", session.RemoteAddr(), message)
+	debugLog.Printf("Received message from Client %s. Message content: %s.", Green(session.RemoteAddr()), Green(message))
 }
 
 // ======== ======== Example server session create/close listener ======== ========
@@ -53,6 +52,5 @@ func (t ExampleSessionListener) OnSessionClose(s *Session) {
 type ExampleClientMessageListener struct{}
 
 func (t ExampleClientMessageListener) OnMessage(ctx context.Context, message interface{}, cli *TCPClient) {
-	cli.debugLogger.Printf("Received message from Server %s. Message content: %s.", cli.RemoteAddr(), message)
+	cli.debugLogger.Printf("Received message from Server %s. Message content: %s.", Green(cli.RemoteAddr()), Green(message))
 }
-

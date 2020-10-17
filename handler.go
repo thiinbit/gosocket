@@ -9,6 +9,13 @@ import (
 	"net"
 )
 
+// ErrTimeout is returned for an expired deadline.
+var ErrTimeout error = &TimeoutError{}
+// TimeoutError is returned for an expired deadline.
+type TimeoutError struct{}
+// Implement the net.Error interface.
+func (e *TimeoutError) Error() string   { return "i/o timeout" }
+
 // PacketHandler on packet receive processor
 type PacketHandler interface {
 	PacketReceived(ctx context.Context, packet *Packet, session *Session)

@@ -24,12 +24,13 @@ type TCPClient struct {
 	status           string              // Client status Preparing|Running|Stop
 	readDeadline     time.Duration       // Client read deadline
 	writeDeadline    time.Duration       // Client write deadline
+	heartbeat        time.Duration       // Client healthy check heartbeat time
 	connect          *net.TCPConn        // Client TCP conn
 	serverAddr       string              // Client connect server address ("tcp", "golang.org:http"| "tcp", "198.51.100.1:80 | [fe80::1%lo0]:53)
 	maxPacketBodyLen uint32              // Client send/receive packet max body length limit (byte)
 	debugLogger      DebugLogger         // Client debug logger
 	logger           Logger              // Client run logger
-	codec            Codec               // Client send/receive packet codec
+	codec            ClientCodec         // Client send/receive packet codec
 	packetHandler    ClientPacketHandler // Client connect on packet receive handler
 	messageListener  ClientMessageListener
 	hangupSign       chan bool
@@ -48,12 +49,13 @@ func NewTcpClient(serAddr string) *TCPClient {
 		status:           Preparing, // Preparing, Running, Stop
 		writeDeadline:    sessionDefaultWriteDeadline,
 		readDeadline:     sessionDefaultReadDeadline,
+		heartbeat:        sessionDefaultHeartbeat,
 		connect:          nil,
 		serverAddr:       serAddr,
 		maxPacketBodyLen: defaultMaxPacketBodyLength,
 		debugLogger:      DebugLogger{isDebugMode: true, logger: DefaultDebugLogger},
 		logger:           DefaultLogger,
-		codec:            DefaultCodec{},
+		codec:            ClientDefaultCodec{},
 		packetHandler:    defaultClientPacketHander{},
 		messageListener:  nil,
 		hangupSign:       make(chan bool),
@@ -65,6 +67,19 @@ func NewTcpClient(serAddr string) *TCPClient {
 func (cli *TCPClient) RegisterMessageListener(listener ClientMessageListener) *TCPClient {
 	cli.checkPreparingStatus()
 	cli.messageListener = listener
+	return cli
+}
+
+func (cli *TCPClient) SetDebugMode(on bool) *TCPClient {
+	cli.mu.Lock()
+
+	if cli.env = DEBUG; !on {
+		cli.env = RELEASE
+	}
+	cli.debugLogger.SetDebugMode(on)
+
+	cli.mu.Unlock()
+
 	return cli
 }
 
@@ -83,7 +98,7 @@ func (cli *TCPClient) SetLogger(debugLogger Logger, logger Logger) *TCPClient {
 	return cli
 }
 
-func (cli *TCPClient) SetCodec(codec Codec) *TCPClient {
+func (cli *TCPClient) SetCodec(codec ClientCodec) *TCPClient {
 	cli.checkPreparingStatus()
 	cli.codec = codec
 	return cli
@@ -220,7 +235,7 @@ func (cli *TCPClient) handleWrite(ctx context.Context) {
 
 		case msg := <-cli.msgSendChan:
 
-			data, err := cli.codec.Encode(msg)
+			data, err := cli.codec.Encode(ctx, msg, cli)
 
 			if err != nil {
 				cli.Hangup(fmt.Sprint("encode data error.", err))
@@ -237,8 +252,8 @@ func (cli *TCPClient) handleWrite(ctx context.Context) {
 
 			cli.packetHandler.PacketSend(ctx, pac, cli)
 
-		case <-time.After(5 * time.Second):
-			if cli.lastActive.Add(5 * time.Second).After(time.Now()) {
+		case <-time.After(cli.heartbeat):
+			if cli.lastActive.Add(cli.heartbeat).After(time.Now()) {
 				cli.debugLogger.Printf("Cli %s healthy check.", cli.name)
 				continue
 			}
@@ -269,10 +284,14 @@ func (cli *TCPClient) handleRead(ctx context.Context) {
 			// Read Version
 			var verBuf [1]byte
 			if _, err := cli.connect.Read(verBuf[:]); err != nil {
-				if err != io.EOF {
-					cli.Hangup(fmt.Sprint("Read ver error. ", err))
-				} else {
+				if timeoutErr, ok := err.(*net.OpError); ok && timeoutErr.Err.Error() == ErrTimeout.Error() {
+					//cli.debugLogger.Printf("Cli %s read continue.", cli.name)
+					continue
+				}
+				if err.Error() == io.EOF.Error() {
 					cli.Hangup(fmt.Sprint("EOF. ", err))
+				} else {
+					cli.Hangup(fmt.Sprint("Read ver error. ", err))
 				}
 				return
 			}
